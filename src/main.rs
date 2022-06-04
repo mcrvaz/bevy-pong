@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 mod input;
 mod game;
+mod utils;
 
 fn main() {
     App::new()

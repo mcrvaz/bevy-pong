@@ -1,8 +1,6 @@
-use super::input;
-use bevy::{
-    prelude::*,
-    sprite::{self, collide_aabb},
-};
+use super::{input, utils};
+
+use bevy::{prelude::*, sprite::collide_aabb};
 use rand::prelude::*;
 
 pub struct PongGame;
@@ -18,8 +16,8 @@ impl Plugin for PongGame {
                     .label(Label::Default)
                     .after(input::Label::Default)
                     .with_system(paddle_movement)
-                    .with_system(ball_movement)
-                    .with_system(paddle_ball_collision),
+                    .with_system(paddle_ball_collision.before(ball_movement))
+                    .with_system(ball_movement),
             );
     }
 }
@@ -94,7 +92,7 @@ fn spawn_ball(mut commands: Commands) {
         })
         .insert(Ball {
             // movement_dir: Vec3::new(random::<f32>(), random::<f32>(), 0.0),
-            movement_dir: Vec3::new(random::<f32>(), 0.0, 0.0),
+            movement_dir: Vec3::new(random::<f32>(), 0.0, 0.0).normalize(),
         })
         .insert(Speed { val: 10.0 });
 }
@@ -117,10 +115,10 @@ fn ball_movement(mut query: Query<(&mut Transform, &Ball, &Speed)>) {
 }
 
 fn paddle_ball_collision(
-    ball_query: Query<(&Sprite, &Transform), With<Ball>>,
+    mut ball_query: Query<(&Sprite, &Transform, &mut Ball)>,
     paddle_query: Query<(&Sprite, &Transform), With<Paddle>>,
 ) {
-    for (ball_spr, ball_transform) in ball_query.iter() {
+    for (ball_spr, ball_transform, mut ball) in ball_query.iter_mut() {
         for (paddle_spr, paddle_transform) in paddle_query.iter() {
             let collision = collide_aabb::collide(
                 ball_transform.translation,
@@ -129,9 +127,10 @@ fn paddle_ball_collision(
                 paddle_spr.custom_size.unwrap(),
             );
             if collision.is_some() {
-                println!("Collided!");
+                let v2_dir = collision_to_direction(collision) * 2.0;
+                let collision_dir = utils::v2_to_v3(v2_dir);
+                ball.movement_dir = (ball.movement_dir + collision_dir).normalize();
             }
-            let direction = collision_to_direction(collision);
         }
     }
 }
