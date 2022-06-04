@@ -31,6 +31,10 @@ pub enum Label {
 struct Speed {
     val: f32,
 }
+#[derive(Component)]
+struct MovementDirection {
+    val: Vec3,
+}
 
 #[derive(Component)]
 struct Paddle;
@@ -42,9 +46,7 @@ struct PlayerPaddle;
 struct AIPaddle;
 
 #[derive(Component)]
-struct Ball {
-    movement_dir: Vec3,
-}
+struct Ball;
 
 fn setup_camera(mut commands: Commands) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
@@ -75,7 +77,8 @@ fn spawn_paddle(commands: &mut Commands, translation: &Vec3) -> Entity {
             ..default()
         })
         .insert(Paddle)
-        .insert(Speed { val: 10.0 })
+        .insert(MovementDirection { val: Vec3::ZERO })
+        .insert(Speed { val: 500.0 })
         .id()
 }
 
@@ -90,60 +93,59 @@ fn spawn_ball(mut commands: Commands) {
             transform: Transform { ..default() },
             ..default()
         })
-        .insert(Ball {
-            // movement_dir: Vec3::new(random::<f32>(), random::<f32>(), 0.0),
-            movement_dir: Vec3::new(random::<f32>(), 0.0, 0.0).normalize(),
+        .insert(Ball)
+        .insert(MovementDirection {
+            val: Vec3::new(random::<f32>(), 0.0, 0.0).normalize_or_zero(),
         })
-        .insert(Speed { val: 10.0 });
+        .insert(Speed { val: 500.0 });
 }
 
 fn paddle_movement(
+    time: Res<Time>,
     axis_inputs: Query<&input::InputAxes>,
-    mut query: Query<(&mut Transform, &Speed), (With<Paddle>, With<PlayerPaddle>)>,
+    mut query: Query<
+        (&mut Transform, &mut MovementDirection, &Speed),
+        (With<Paddle>, With<PlayerPaddle>),
+    >,
 ) {
     let input = axis_inputs.single();
     let vertical_input = input.val.get(&input::Axis::Vertical).unwrap();
-    for (mut transform, speed) in query.iter_mut() {
-        transform.translation.y += vertical_input.val * speed.val;
+    for (mut transform, mut mov_dir, speed) in query.iter_mut() {
+        let previous_pos = transform.translation;
+        transform.translation.y += vertical_input.val * speed.val * time.delta_seconds();
+        mov_dir.val = (transform.translation - previous_pos).normalize_or_zero();
     }
 }
 
-fn ball_movement(mut query: Query<(&mut Transform, &Ball, &Speed)>) {
-    for (mut transform, ball, speed) in query.iter_mut() {
-        transform.translation += ball.movement_dir * speed.val;
+fn ball_movement(
+    time: Res<Time>,
+    mut query: Query<(&mut Transform, &MovementDirection, &Speed), With<Ball>>,
+) {
+    for (mut transform, move_dir, speed) in query.iter_mut() {
+        transform.translation += move_dir.val * speed.val * time.delta_seconds();
     }
 }
 
 fn paddle_ball_collision(
-    mut ball_query: Query<(&Sprite, &Transform, &mut Ball)>,
-    paddle_query: Query<(&Sprite, &Transform), With<Paddle>>,
+    mut ball_query: Query<
+        (&Sprite, &Transform, &mut MovementDirection),
+        (With<Ball>, Without<Paddle>),
+    >,
+    paddle_query: Query<(&Sprite, &Transform, &MovementDirection), (With<Paddle>, Without<Ball>)>,
 ) {
-    for (ball_spr, ball_transform, mut ball) in ball_query.iter_mut() {
-        for (paddle_spr, paddle_transform) in paddle_query.iter() {
+    for (ball_spr, ball_transform, mut ball_mov_dir) in ball_query.iter_mut() {
+        for (paddle_spr, paddle_transform, paddle_mov_dir) in paddle_query.iter() {
             let collision = collide_aabb::collide(
                 ball_transform.translation,
                 ball_spr.custom_size.unwrap(),
                 paddle_transform.translation,
                 paddle_spr.custom_size.unwrap(),
             );
-            if collision.is_some() {
-                let v2_dir = collision_to_direction(collision) * 2.0;
-                let collision_dir = utils::v2_to_v3(v2_dir);
-                ball.movement_dir = (ball.movement_dir + collision_dir).normalize();
+            if let Some(c) = collision {
+                let collision_dir = utils::v2_to_v3(utils::collision_to_direction(c) * 2.0);
+                let result_dir = (collision_dir + paddle_mov_dir.val + ball_mov_dir.val) / 3.0;
+                ball_mov_dir.val = result_dir.normalize_or_zero();
             }
         }
-    }
-}
-
-fn collision_to_direction(collision: Option<collide_aabb::Collision>) -> Vec2 {
-    match collision {
-        Some(dir) => match dir {
-            collide_aabb::Collision::Left => Vec2::new(-1.0, 0.0),
-            collide_aabb::Collision::Right => Vec2::new(1.0, 0.0),
-            collide_aabb::Collision::Top => Vec2::new(0.0, 1.0),
-            collide_aabb::Collision::Bottom => Vec2::new(0.0, -1.0),
-            collide_aabb::Collision::Inside => Vec2::ZERO,
-        },
-        None => Vec2::ZERO,
     }
 }
