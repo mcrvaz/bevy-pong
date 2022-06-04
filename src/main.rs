@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+mod input;
 mod game;
 
 fn main() {
@@ -10,6 +11,7 @@ fn main() {
             ..default()
         })
         .add_plugins(DefaultPlugins)
+        .add_plugin(input::PongInput)
         .add_plugin(game::PongGame)
         .run();
 }
