@@ -1,0 +1,8 @@
+{
+    "print": {
+        "scope": "rust",
+        "prefix": "print",
+        "body": "println!(\"{}\", $1);",
+        "description": "println!"
+    },
+}

@@ -1,3 +1,5 @@
+use std::{iter::Sum, ops::Div};
+
 use bevy::{prelude::*, sprite::collide_aabb};
 
 pub fn collision_to_direction(collision: collide_aabb::Collision) -> Vec2 {
@@ -8,6 +10,13 @@ pub fn collision_to_direction(collision: collide_aabb::Collision) -> Vec2 {
         collide_aabb::Collision::Bottom => Vec2::new(0.0, -1.0),
         collide_aabb::Collision::Inside => Vec2::ZERO,
     }
+}
+
+pub fn avg<'a, T>(values: &'a [T]) -> T
+where
+    T: Sum<&'a T> + Div<f32, Output = T>,
+{
+    values.iter().sum::<T>() / (values.len() as f32)
 }
 
 pub fn v2_to_v3(v2: Vec2) -> Vec3 {

@@ -1,5 +1,6 @@
 use bevy::{prelude::*, window::PresentMode};
 mod game;
+mod game_entities;
 mod input;
 mod utils;
 
@@ -15,7 +16,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(bevy_framepace::FramepacePlugin {
             framerate_limit: bevy_framepace::FramerateLimit::Manual(144),
-            warn_on_frame_drop: false
+            warn_on_frame_drop: false,
         })
         .add_plugin(input::PongInput)
         .add_plugin(game::PongGame)
