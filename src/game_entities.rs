@@ -1,4 +1,27 @@
+use std::collections::HashMap;
+
 use bevy::prelude::*;
+
+pub struct GoalEvent(pub Team);
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+pub enum Team {
+    Player = 0,
+    AI = 1,
+}
+
+impl Opposite for Team {
+    fn opposite(&self) -> Self {
+        match self {
+            Team::Player => Team::AI,
+            Team::AI => Team::Player,
+        }
+    }
+}
+
+pub trait Opposite {
+    fn opposite(&self) -> Self;
+}
 
 #[derive(Clone, Component, Default)]
 pub struct Speed(pub f32);
@@ -30,6 +53,11 @@ impl Default for Ball {
 #[derive(Clone, Component, Default)]
 pub struct Bounds;
 
+#[derive(Clone, Component)]
+pub struct Goal {
+    pub team: Team,
+}
+
 #[derive(Bundle, Default)]
 pub struct PaddleBundle {
     pub paddle: Paddle,
@@ -53,4 +81,9 @@ pub struct BoundsBundle {
     pub bounds: Bounds,
     #[bundle]
     pub sprite: SpriteBundle,
+}
+
+#[derive(Clone, Component, Default)]
+pub struct MatchScore {
+    pub score: HashMap<Team, i32>,
 }

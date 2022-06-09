@@ -1,6 +1,7 @@
 use bevy::{prelude::*, window::PresentMode};
 mod game;
 mod game_entities;
+mod game_scene_setup;
 mod input;
 mod utils;
 

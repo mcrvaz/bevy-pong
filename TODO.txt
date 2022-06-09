@@ -2,6 +2,7 @@ score system
 victory condition
 AI paddle controller
 multiple balls
+ball spawn animation
 sounds
 menu
 
