@@ -30,12 +30,3 @@ pub fn rand_sign() -> f32 {
         -1.0
     }
 }
-
-pub fn reflect_from_plane(dir: Vec3, plane: Vec3) -> Vec3 {
-    let factor = -2.0 * plane.dot(dir);
-    Vec3::new(
-        factor * plane.x + dir.x,
-        factor * plane.y + dir.y,
-        factor * plane.z + dir.z,
-    )
-}

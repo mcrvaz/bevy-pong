@@ -1,6 +1,14 @@
 use super::game_entities::*;
 use bevy::prelude::*;
+use bevy_rapier2d::{
+    plugin::RapierConfiguration,
+    prelude::{ActiveEvents, Ccd, Collider, LockedAxes, RigidBody, Velocity, Dominance, Restitution},
+};
 use std::collections::HashMap;
+
+pub fn setup_physics(mut physics: ResMut<RapierConfiguration>) {
+    physics.gravity = Vec2::ZERO;
+}
 
 pub fn setup_camera(mut commands: Commands) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
@@ -18,25 +26,36 @@ pub fn spawn_paddles(mut commands: Commands) {
 }
 
 pub fn spawn_ball(mut commands: Commands) {
-    commands.spawn_bundle(BallBundle {
-        ball: Ball {
-            speed_multiplier: 1.05,
-        },
-        speed: Speed {
-            initial: 500.0,
-            current: 500.0,
-        },
-        mov_dir: MovementDirection::from_random_horizontal(),
-        sprite: SpriteBundle {
-            sprite: Sprite {
-                color: Color::WHITE,
-                custom_size: Option::Some(Vec2::new(25.0, 25.0)),
+    commands
+        .spawn_bundle(BallBundle {
+            ball: Ball {
+                speed_multiplier: 1.05,
+            },
+            speed: Speed {
+                initial: 500.0,
+                current: 500.0,
+            },
+            mov_dir: MovementDirection::from_random_horizontal(),
+            sprite: SpriteBundle {
+                sprite: Sprite {
+                    color: Color::WHITE,
+                    custom_size: Option::Some(Vec2::new(25.0, 25.0)),
+                    ..default()
+                },
+                transform: Transform::default(),
                 ..default()
             },
-            transform: Transform::default(),
+            collider: Collider::cuboid(25.0, 25.0),
+            rb: RigidBody::Dynamic,
+            ccd: Ccd::enabled(),
+            coll_events: ActiveEvents::COLLISION_EVENTS,
+            locked_axes: LockedAxes::ROTATION_LOCKED,
+        })
+        .insert(Velocity {
+            linvel: Vec2::new(500.0, 0.0),
             ..default()
-        },
-    });
+        })
+        .insert(Restitution::coefficient(1.0));
 }
 
 pub fn spawn_bounds(window: Res<WindowDescriptor>, mut commands: Commands) {
@@ -104,8 +123,16 @@ fn spawn_paddle(commands: &mut Commands, translation: &Vec3) -> Entity {
                 },
                 ..default()
             },
-            ..default()
+            collider: Collider::cuboid(50.0, 250.0),
+            rb: RigidBody::Dynamic,
+            paddle: default(),
+            mov_dir: default(),
+            coll_events: ActiveEvents::COLLISION_EVENTS,
+            locked_axes: LockedAxes::all(),
         })
+        .insert(Velocity::zero())
+        .insert(Dominance::group(10))
+        .insert(Restitution::coefficient(1.0))
         .id()
 }
 
@@ -130,7 +157,11 @@ fn spawn_bound(
                 },
                 ..default()
             },
-            ..default()
+            collider: Collider::cuboid(size.x, size.y),
+            rb: RigidBody::Fixed,
+            bounds: default(),
+            coll_events: ActiveEvents::COLLISION_EVENTS,
         })
+        .insert(Restitution::coefficient(1.0))
         .id()
 }

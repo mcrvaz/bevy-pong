@@ -4,6 +4,7 @@ mod game_entities;
 mod game_scene_setup;
 mod input;
 mod utils;
+use bevy_rapier2d::prelude::*;
 
 fn main() {
     App::new()
@@ -15,6 +16,8 @@ fn main() {
             ..default()
         })
         .add_plugins(DefaultPlugins)
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
+        .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(bevy_framepace::FramepacePlugin {
             framerate_limit: bevy_framepace::FramerateLimit::Manual(144),
             warn_on_frame_drop: false,

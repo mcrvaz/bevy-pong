@@ -1,5 +1,6 @@
 use super::utils;
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::{ActiveEvents, Ccd, Collider, RigidBody, LockedAxes};
 use std::collections::HashMap;
 
 pub struct GoalEvent {
@@ -79,13 +80,17 @@ pub struct Goal {
     pub team: Team,
 }
 
-#[derive(Bundle, Default)]
+#[derive(Bundle)]
 pub struct PaddleBundle {
     pub paddle: Paddle,
     pub speed: Speed,
     pub mov_dir: MovementDirection,
     #[bundle]
     pub sprite: SpriteBundle,
+    pub rb: RigidBody,
+    pub collider: Collider,
+    pub coll_events: ActiveEvents,
+    pub locked_axes: LockedAxes,
 }
 
 #[derive(Bundle)]
@@ -95,13 +100,21 @@ pub struct BallBundle {
     pub mov_dir: MovementDirection,
     #[bundle]
     pub sprite: SpriteBundle,
+    pub rb: RigidBody,
+    pub collider: Collider,
+    pub coll_events: ActiveEvents,
+    pub locked_axes: LockedAxes,
+    pub ccd: Ccd,
 }
 
-#[derive(Bundle, Default)]
+#[derive(Bundle)]
 pub struct BoundsBundle {
     pub bounds: Bounds,
     #[bundle]
     pub sprite: SpriteBundle,
+    pub rb: RigidBody,
+    pub collider: Collider,
+    pub coll_events: ActiveEvents,
 }
 
 #[derive(Clone, Component, Default)]

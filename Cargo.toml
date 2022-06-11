@@ -8,6 +8,7 @@ edition = "2021"
 bevy = "0.7"
 rand = "0.8.5"
 bevy_framepace = "0.4.0"
+bevy_rapier2d =  { version = "0.14.1", features = [ "debug-render" ] }
 
 [workspace]
 resolver = "2"

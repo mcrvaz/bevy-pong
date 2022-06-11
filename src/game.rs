@@ -1,11 +1,13 @@
 use super::{game_entities::*, game_scene_setup::*, input, utils};
-use bevy::{prelude::*, sprite::collide_aabb};
+use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 pub struct PongGame;
 impl Plugin for PongGame {
     fn build(&self, app: &mut App) {
         app.insert_resource(ClearColor(Color::BLACK))
             .add_startup_system(setup_camera)
+            .add_startup_system(setup_physics)
             .add_startup_system(spawn_ball)
             .add_startup_system(spawn_paddles)
             .add_startup_system(spawn_bounds)
@@ -13,13 +15,18 @@ impl Plugin for PongGame {
             .add_event::<GoalEvent>()
             .add_system_set(
                 SystemSet::new()
-                    .label(Label::Default)
+                    .label(Label::CollisionCheck)
                     .after(input::Label::Default)
-                    .with_system(paddle_movement)
-                    .with_system(ball_collision)
-                    .with_system(ball_movement)
+                    .with_system(evaluate_ball_collision),
+            )
+            .add_system_set(
+                SystemSet::new()
+                    .label(Label::Default)
+                    .after(Label::CollisionCheck)
+                    // .with_system(ball_movement)
                     .with_system(score)
-                    .with_system(reset_ball),
+                    .with_system(reset_ball)
+                    .with_system(paddle_movement),
             );
     }
 }
@@ -27,77 +34,41 @@ impl Plugin for PongGame {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemLabel)]
 pub enum Label {
     Default,
+    CollisionCheck,
 }
 
 fn paddle_movement(
-    time: Res<Time>,
     axis_inputs: Query<&input::InputAxes>,
-    mut query: Query<
-        (&mut Transform, &mut MovementDirection, &Speed),
-        (With<Paddle>, With<PlayerPaddle>),
-    >,
+    mut query: Query<(&mut Velocity, &Speed), With<PlayerPaddle>>,
 ) {
     let input = axis_inputs.single();
     let vertical_input = input.val.get(&input::Axis::Vertical).unwrap();
-    for (mut transform, mut mov_dir, speed) in query.iter_mut() {
-        let previous_pos = transform.translation;
-        transform.translation.y += vertical_input.val * speed.current * time.delta_seconds();
-        mov_dir.0 = (transform.translation - previous_pos).normalize_or_zero();
+    for (mut rb, speed) in query.iter_mut() {
+        rb.linvel = Vec2::new(0.0, vertical_input.val * speed.current);
     }
 }
 
-fn ball_movement(
-    time: Res<Time>,
-    mut query: Query<(&mut Transform, &MovementDirection, &Speed), With<Ball>>,
-) {
-    for (mut transform, move_dir, speed) in query.iter_mut() {
-        transform.translation += move_dir.0 * speed.current * time.delta_seconds();
-    }
-}
+// fn ball_movement(mut query: Query<(&mut Velocity, &MovementDirection, &Speed), With<Ball>>) {
+//     for (mut rb, mov_dir, speed) in query.iter_mut() {
+//         rb.linvel = (mov_dir.0 * speed.current).truncate();
+//     }
+// }
 
-fn ball_collision(
-    ev_goal: EventWriter<GoalEvent>,
-    mut ball_query: Query<(
-        Entity,
-        &Sprite,
-        &Transform,
-        &Ball,
-        &mut MovementDirection,
-        &mut Speed,
-    )>,
-    colliders_query: Query<
-        (
-            &Sprite,
-            &Transform,
-            Option<&MovementDirection>,
-            Option<&Goal>,
-        ),
-        Without<Ball>,
-    >,
-) {
-    for (entity, ball_spr, ball_transform, ball, mut ball_mov_dir, mut ball_speed) in
-        ball_query.iter_mut()
-    {
-        for (coll_spr, coll_transform, coll_mov_dir, goal) in colliders_query.iter() {
-            let collision = collide_aabb::collide(
-                ball_transform.translation,
-                ball_spr.custom_size.unwrap(),
-                coll_transform.translation,
-                coll_spr.custom_size.unwrap(),
-            );
-            if let Some(c) = collision {
-                if let Some(g) = goal {
-                    handle_ball_goal_collision(ev_goal, g, entity.id());
-                    return;
-                }
+// fn start_ball_movement(mut query: Query<(&mut Velocity, &MovementDirection, &Speed), With<Ball>>) {
+//     for (mut rb, mov_dir, speed) in query.iter_mut() {
+//         println!("{}", "alo");
+//         rb.linvel = Vec2::new(1.0 * 500.0, 0.0);
+//     }
+// }
 
-                let collision_dir = utils::v2_to_v3(utils::collision_to_direction(c) * 2.0);
-                let vectors = if let Some(c_mov_dir) = coll_mov_dir {
-                    vec![collision_dir, ball_mov_dir.0, c_mov_dir.0]
-                } else {
-                    vec![collision_dir, ball_mov_dir.0]
-                };
-                handle_ball_collision(&vectors, &mut ball_mov_dir, &mut ball_speed, ball);
+fn evaluate_ball_collision(
+    mut ball_query: Query<(Entity, &mut MovementDirection), With<Ball>>,
+    rapier_context: Res<RapierContext>,
+) {
+    for (ball_entity, mut ball_mov_dir) in ball_query.iter_mut() {
+        for contact_pair in rapier_context.contacts_with(ball_entity) {
+            for manifold in contact_pair.manifolds() {
+                // ball_mov_dir.0 = manifold.normal().extend(0.0);
             }
         }
     }
@@ -110,7 +81,7 @@ fn handle_ball_collision(
     ball: &Ball,
 ) {
     let result_dir = utils::avg(collision_vectors);
-    ball_mov_dir.0 = result_dir.normalize_or_zero();
+    // ball_mov_dir.0 = result_dir.normalize_or_zero();
     ball_speed.current *= ball.speed_multiplier;
 }
 
