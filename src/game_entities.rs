@@ -1,8 +1,11 @@
+use super::utils;
+use bevy::prelude::*;
 use std::collections::HashMap;
 
-use bevy::prelude::*;
-
-pub struct GoalEvent(pub Team);
+pub struct GoalEvent {
+    pub ball_id: u32,
+    pub team: Team,
+}
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum Team {
@@ -23,11 +26,36 @@ pub trait Opposite {
     fn opposite(&self) -> Self;
 }
 
+pub trait Reset {
+    fn reset(&mut self);
+}
+
 #[derive(Clone, Component, Default)]
-pub struct Speed(pub f32);
+pub struct Speed {
+    pub initial: f32,
+    pub current: f32,
+}
+
+impl Reset for Speed {
+    fn reset(&mut self) {
+        self.current = self.initial;
+    }
+}
 
 #[derive(Clone, Component, Default)]
 pub struct MovementDirection(pub Vec3);
+
+impl MovementDirection {
+    pub fn set_random_horizontal(&mut self) {
+        self.0 = Vec3::new(utils::rand_sign(), 0.0, 0.0);
+    }
+
+    pub fn from_random_horizontal() -> Self {
+        let mut dir = MovementDirection(Vec3::ZERO);
+        dir.set_random_horizontal();
+        dir
+    }
+}
 
 #[derive(Clone, Component, Default)]
 pub struct Paddle;
@@ -41,13 +69,6 @@ pub struct AIPaddle;
 #[derive(Clone, Component)]
 pub struct Ball {
     pub speed_multiplier: f32,
-}
-impl Default for Ball {
-    fn default() -> Self {
-        Self {
-            speed_multiplier: 1.0,
-        }
-    }
 }
 
 #[derive(Clone, Component, Default)]
@@ -67,7 +88,7 @@ pub struct PaddleBundle {
     pub sprite: SpriteBundle,
 }
 
-#[derive(Bundle, Default)]
+#[derive(Bundle)]
 pub struct BallBundle {
     pub ball: Ball,
     pub speed: Speed,

@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 use super::game_entities::*;
 use bevy::prelude::*;
-use rand::prelude::*;
+use std::collections::HashMap;
 
 pub fn setup_camera(mut commands: Commands) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
@@ -24,8 +22,11 @@ pub fn spawn_ball(mut commands: Commands) {
         ball: Ball {
             speed_multiplier: 1.05,
         },
-        speed: Speed(500.0),
-        mov_dir: MovementDirection(Vec3::new(random::<f32>(), 0.0, 0.0).normalize_or_zero()),
+        speed: Speed {
+            initial: 500.0,
+            current: 500.0,
+        },
+        mov_dir: MovementDirection::from_random_horizontal(),
         sprite: SpriteBundle {
             sprite: Sprite {
                 color: Color::WHITE,
@@ -35,13 +36,12 @@ pub fn spawn_ball(mut commands: Commands) {
             transform: Transform::default(),
             ..default()
         },
-        ..default()
     });
 }
 
-pub fn spawn_bounds(mut commands: Commands) {
-    let height = 1080.0;
-    let width = 1920.0;
+pub fn spawn_bounds(window: Res<WindowDescriptor>, mut commands: Commands) {
+    let height = window.height;
+    let width = window.width;
     let half_height = height / 2.0;
     let half_width = width / 2.0;
     let fixed_size = 25.0;
@@ -88,7 +88,10 @@ fn spawn_enemy_paddle(mut commands: &mut Commands) {
 fn spawn_paddle(commands: &mut Commands, translation: &Vec3) -> Entity {
     commands
         .spawn_bundle(PaddleBundle {
-            speed: Speed(500.0),
+            speed: Speed {
+                initial: 500.0,
+                current: 500.0,
+            },
             sprite: SpriteBundle {
                 sprite: Sprite {
                     color: Color::WHITE,

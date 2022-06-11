@@ -1,6 +1,6 @@
-use std::{iter::Sum, ops::Div};
-
 use bevy::{prelude::*, sprite::collide_aabb};
+use rand::prelude::*;
+use std::{iter::Sum, ops::Div};
 
 pub fn collision_to_direction(collision: collide_aabb::Collision) -> Vec2 {
     match collision {
@@ -21,4 +21,21 @@ where
 
 pub fn v2_to_v3(v2: Vec2) -> Vec3 {
     v2.extend(0.0)
+}
+
+pub fn rand_sign() -> f32 {
+    if random::<f32>() >= 0.5 {
+        1.0
+    } else {
+        -1.0
+    }
+}
+
+pub fn reflect_from_plane(dir: Vec3, plane: Vec3) -> Vec3 {
+    let factor = -2.0 * plane.dot(dir);
+    Vec3::new(
+        factor * plane.x + dir.x,
+        factor * plane.y + dir.y,
+        factor * plane.z + dir.z,
+    )
 }

@@ -18,7 +18,8 @@ impl Plugin for PongGame {
                     .with_system(paddle_movement)
                     .with_system(ball_collision)
                     .with_system(ball_movement)
-                    .with_system(score),
+                    .with_system(score)
+                    .with_system(reset_ball),
             );
     }
 }
@@ -40,7 +41,7 @@ fn paddle_movement(
     let vertical_input = input.val.get(&input::Axis::Vertical).unwrap();
     for (mut transform, mut mov_dir, speed) in query.iter_mut() {
         let previous_pos = transform.translation;
-        transform.translation.y += vertical_input.val * speed.0 * time.delta_seconds();
+        transform.translation.y += vertical_input.val * speed.current * time.delta_seconds();
         mov_dir.0 = (transform.translation - previous_pos).normalize_or_zero();
     }
 }
@@ -50,13 +51,14 @@ fn ball_movement(
     mut query: Query<(&mut Transform, &MovementDirection, &Speed), With<Ball>>,
 ) {
     for (mut transform, move_dir, speed) in query.iter_mut() {
-        transform.translation += move_dir.0 * speed.0 * time.delta_seconds();
+        transform.translation += move_dir.0 * speed.current * time.delta_seconds();
     }
 }
 
 fn ball_collision(
     ev_goal: EventWriter<GoalEvent>,
     mut ball_query: Query<(
+        Entity,
         &Sprite,
         &Transform,
         &Ball,
@@ -73,7 +75,8 @@ fn ball_collision(
         Without<Ball>,
     >,
 ) {
-    for (ball_spr, ball_transform, ball, mut ball_mov_dir, mut ball_speed) in ball_query.iter_mut()
+    for (entity, ball_spr, ball_transform, ball, mut ball_mov_dir, mut ball_speed) in
+        ball_query.iter_mut()
     {
         for (coll_spr, coll_transform, coll_mov_dir, goal) in colliders_query.iter() {
             let collision = collide_aabb::collide(
@@ -84,7 +87,7 @@ fn ball_collision(
             );
             if let Some(c) = collision {
                 if let Some(g) = goal {
-                    handle_ball_goal_collision(ev_goal, g);
+                    handle_ball_goal_collision(ev_goal, g, entity.id());
                     return;
                 }
 
@@ -108,19 +111,36 @@ fn handle_ball_collision(
 ) {
     let result_dir = utils::avg(collision_vectors);
     ball_mov_dir.0 = result_dir.normalize_or_zero();
-    ball_speed.0 *= ball.speed_multiplier;
+    ball_speed.current *= ball.speed_multiplier;
 }
 
-fn handle_ball_goal_collision(mut ev_goal: EventWriter<GoalEvent>, goal: &Goal) {
-    ev_goal.send(GoalEvent(goal.team.opposite()));
+fn handle_ball_goal_collision(mut ev_goal: EventWriter<GoalEvent>, goal: &Goal, ball_id: u32) {
+    ev_goal.send(GoalEvent {
+        team: goal.team.opposite(),
+        ball_id: ball_id,
+    });
 }
 
 fn score(mut ev_goal: EventReader<GoalEvent>, mut query: Query<&mut MatchScore>) {
     let mut match_score = query.single_mut();
-    for team in ev_goal.iter() {
-        let team_score = match_score.score.get_mut(&team.0).unwrap();
+    for ev in ev_goal.iter() {
+        let team = &ev.team;
+        let team_score = match_score.score.get_mut(team).unwrap();
         *team_score += 1;
     }
 }
 
-fn reset(mut ev_goal: EventReader<GoalEvent>) {}
+fn reset_ball(
+    mut ev_goal: EventReader<GoalEvent>,
+    mut ball_query: Query<(Entity, &mut Transform, &mut MovementDirection, &mut Speed), With<Ball>>,
+) {
+    for ev in ev_goal.iter() {
+        let (_, mut transform, mut mov_dir, mut speed) = ball_query
+            .iter_mut()
+            .find(|x| x.0.id() == ev.ball_id)
+            .unwrap();
+        transform.translation = Vec3::ZERO;
+        mov_dir.set_random_horizontal();
+        speed.reset();
+    }
+}
