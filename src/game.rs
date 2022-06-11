@@ -95,8 +95,7 @@ fn handle_ball_goal_collision(ev_goal: &mut EventWriter<GoalEvent>, goal: &Goal,
 fn score(mut ev_goal: EventReader<GoalEvent>, mut query: Query<&mut MatchScore>) {
     for ev in ev_goal.iter() {
         let mut match_score = query.single_mut();
-        let team = &ev.team;
-        let team_score = match_score.score.get_mut(team).unwrap();
+        let team_score = match_score.score.get_mut(&ev.team).unwrap();
         *team_score += 1;
     }
 }
@@ -117,8 +116,10 @@ fn reset_ball(
 
 fn set_initial_ball_position(mut transform: &mut Transform) {
     transform.translation = Vec3::ZERO;
+    transform.rotation = Quat::IDENTITY;
 }
 
 fn set_initial_ball_speed(ball: &Ball, mut velocity: &mut Velocity) {
     velocity.linvel = utils::random_horizontal() * ball.initial_speed;
+    velocity.angvel = 0.0;
 }

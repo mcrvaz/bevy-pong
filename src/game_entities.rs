@@ -74,7 +74,6 @@ pub struct BallBundle {
     pub rb: RigidBody,
     pub collider: Collider,
     pub coll_events: ActiveEvents,
-    pub locked_axes: LockedAxes,
     pub ccd: Ccd,
 }
 
@@ -83,7 +82,6 @@ pub struct BoundsBundle {
     pub bounds: Bounds,
     #[bundle]
     pub sprite: SpriteBundle,
-    pub rb: RigidBody,
     pub collider: Collider,
     pub coll_events: ActiveEvents,
 }

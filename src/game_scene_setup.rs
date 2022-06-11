@@ -19,10 +19,10 @@ pub fn spawn_score(mut commands: Commands) {
 
 pub fn spawn_paddles(mut commands: Commands) {
     spawn_player_paddle(&mut commands);
-    // spawn_enemy_paddle(&mut commands);
+    spawn_enemy_paddle(&mut commands);
 }
 
-pub fn spawn_ball(mut commands: Commands) {
+pub fn spawn_ball(mut commands: Commands, assets: Res<AssetServer>) {
     commands
         .spawn_bundle(BallBundle {
             ball: Ball {
@@ -35,14 +35,13 @@ pub fn spawn_ball(mut commands: Commands) {
                     custom_size: Option::Some(Vec2::new(25.0, 25.0)),
                     ..default()
                 },
-                transform: Transform::default(),
+                texture: assets.load("circle.png"),
                 ..default()
             },
-            collider: Collider::cuboid(25.0, 25.0),
+            collider: Collider::ball(12.5),
             rb: RigidBody::Dynamic,
             ccd: Ccd::enabled(),
             coll_events: ActiveEvents::COLLISION_EVENTS,
-            locked_axes: LockedAxes::ROTATION_LOCKED,
         })
         .insert(Velocity {
             linvel: Vec2::new(500.0, 0.0),
@@ -112,7 +111,7 @@ fn spawn_paddle(commands: &mut Commands, translation: &Vec3) -> Entity {
                 },
                 ..default()
             },
-            collider: Collider::cuboid(50.0, 250.0),
+            collider: Collider::cuboid(50.0 / 2.0, 250.0 / 2.0),
             rb: RigidBody::Dynamic,
             paddle: Paddle { speed: 500.0 },
             coll_events: ActiveEvents::COLLISION_EVENTS,
@@ -145,8 +144,7 @@ fn spawn_bound(
                 },
                 ..default()
             },
-            collider: Collider::cuboid(size.x, size.y),
-            rb: RigidBody::Fixed,
+            collider: Collider::cuboid(size.x / 2.0, size.y / 2.0),
             bounds: default(),
             coll_events: ActiveEvents::COLLISION_EVENTS,
         })

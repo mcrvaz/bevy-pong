@@ -1,4 +1,3 @@
-score system
 victory condition
 AI paddle controller
 multiple balls
@@ -8,5 +7,4 @@ menu
 
 optional:
     resolution independent scene
-    continuous collision detection
     powerups
