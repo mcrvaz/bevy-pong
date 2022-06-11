@@ -1,19 +1,25 @@
-use super::{game_entities::*, game_scene_setup::*, input, utils};
+use super::{game_entities::*, game_setup_systems::*, input, utils};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
+use iyes_loopless::prelude::*;
 
 pub struct PongGame;
 impl Plugin for PongGame {
     fn build(&self, app: &mut App) {
         app.insert_resource(ClearColor(Color::BLACK))
+            .insert_resource(BallLaunchDelay(Timer::from_seconds(0.5, false)))
+            .add_event::<BallLaunch>()
             .add_event::<GoalEvent>()
-            .add_startup_system(setup_camera)
-            .add_startup_system(setup_physics)
-            .add_startup_system(spawn_ball)
-            .add_startup_system(spawn_paddles)
-            .add_startup_system(spawn_bounds)
-            .add_startup_system(spawn_score)
-            .add_startup_system(start_ball_movement)
+            .add_startup_system_set(
+                SystemSet::new()
+                    .label(Label::Setup)
+                    .with_system(setup_camera)
+                    .with_system(setup_physics)
+                    .with_system(spawn_ball)
+                    .with_system(spawn_paddles)
+                    .with_system(spawn_bounds)
+                    .with_system(spawn_score),
+            )
             .add_system_set(
                 SystemSet::new()
                     .label(Label::CollisionCheck)
@@ -22,25 +28,55 @@ impl Plugin for PongGame {
             )
             .add_system_set(
                 SystemSet::new()
-                    .label(Label::Default)
+                    .label(Label::BallLaunch)
                     .after(Label::CollisionCheck)
+                    .with_system(ball_launch_timer),
+            )
+            .add_system_set(
+                SystemSet::new()
+                    .label(Label::Default)
+                    .after(Label::BallLaunch)
+                    .with_system(start_ball_movement.run_if(is_ball_launch_ready))
+                    .with_system(prevent_stuck_ball.run_if(is_ball_moving))
                     .with_system(score)
                     .with_system(reset_ball)
-                    .with_system(paddle_movement),
+                    .with_system(paddle_movement)
             );
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemLabel)]
 pub enum Label {
+    Setup,
     CollisionCheck,
+    BallLaunch,
     Default,
+}
+
+fn ball_launch_timer(
+    time: Res<Time>,
+    mut launch_ev: EventReader<BallLaunch>,
+    mut timer: ResMut<BallLaunchDelay>,
+) {
+    for _ in launch_ev.iter() {
+        timer.0.reset();
+    }
+
+    timer.0.tick(time.delta());
+}
+
+fn is_ball_launch_ready(timer: Res<BallLaunchDelay>) -> bool {
+    timer.0.just_finished()
+}
+
+fn is_ball_moving(timer: Res<BallLaunchDelay>) -> bool {
+    timer.0.finished()
 }
 
 fn start_ball_movement(mut query: Query<(&Ball, &mut Velocity, &mut Transform)>) {
     for (ball, mut velocity, mut transform) in query.iter_mut() {
         set_initial_ball_position(&mut transform);
-        set_initial_ball_speed(ball, &mut velocity);
+        launch_ball(ball, &mut velocity);
     }
 }
 
@@ -101,16 +137,18 @@ fn score(mut ev_goal: EventReader<GoalEvent>, mut query: Query<&mut MatchScore>)
 }
 
 fn reset_ball(
+    mut launch_ev: EventWriter<BallLaunch>,
     mut ev_goal: EventReader<GoalEvent>,
-    mut ball_query: Query<(Entity, &Ball, &mut Velocity, &mut Transform)>,
+    mut ball_query: Query<(Entity, &mut Velocity, &mut Transform)>,
 ) {
     for ev in ev_goal.iter() {
-        let (_, ball, mut velocity, mut transform) = ball_query
+        let (_, mut velocity, mut transform) = ball_query
             .iter_mut()
             .find(|x| x.0.id() == ev.ball_id)
             .unwrap();
         set_initial_ball_position(&mut transform);
-        set_initial_ball_speed(ball, &mut velocity);
+        set_initial_ball_speed(&mut velocity);
+        launch_ev.send(BallLaunch);
     }
 }
 
@@ -119,7 +157,21 @@ fn set_initial_ball_position(mut transform: &mut Transform) {
     transform.rotation = Quat::IDENTITY;
 }
 
-fn set_initial_ball_speed(ball: &Ball, mut velocity: &mut Velocity) {
-    velocity.linvel = utils::random_horizontal() * ball.initial_speed;
+fn set_initial_ball_speed(mut velocity: &mut Velocity) {
+    velocity.linvel = Vec2::ZERO;
     velocity.angvel = 0.0;
+}
+
+fn launch_ball(ball: &Ball, mut velocity: &mut Velocity) {
+    velocity.linvel = utils::random_horizontal() * ball.initial_speed;
+}
+
+fn prevent_stuck_ball(mut query: Query<&mut Velocity, With<Ball>>) {
+    const MIN_V: f32 = 25.0;
+    for mut v in query.iter_mut() {
+        println!("{}", v.linvel.x);
+        if utils::approx_eq(v.linvel.x, 0.0, MIN_V) {
+            v.linvel.x += MIN_V * v.linvel.x.signum();
+        }
+    }
 }

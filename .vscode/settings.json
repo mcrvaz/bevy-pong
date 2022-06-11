@@ -3,6 +3,7 @@
         "aabb",
         "angvel",
         "framepace",
+        "iyes",
         "linvel"
     ]
 }

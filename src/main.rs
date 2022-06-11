@@ -1,7 +1,7 @@
 use bevy::{prelude::*, window::PresentMode};
 mod game;
 mod game_entities;
-mod game_scene_setup;
+mod game_setup_systems;
 mod input;
 mod utils;
 use bevy_rapier2d::prelude::*;

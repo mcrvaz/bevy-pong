@@ -43,10 +43,7 @@ pub fn spawn_ball(mut commands: Commands, assets: Res<AssetServer>) {
             ccd: Ccd::enabled(),
             coll_events: ActiveEvents::COLLISION_EVENTS,
         })
-        .insert(Velocity {
-            linvel: Vec2::new(500.0, 0.0),
-            ..default()
-        })
+        .insert(Velocity::zero())
         .insert(Restitution::coefficient(1.0));
 }
 

@@ -1,9 +1,12 @@
 victory condition
+UI: HUD + menu
 AI paddle controller
+Alt player controller
 multiple balls
 ball spawn animation
 sounds
-menu
+
+fix: lock paddle to arena
 
 optional:
     resolution independent scene

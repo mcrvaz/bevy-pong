@@ -36,9 +36,9 @@ pub struct InputAxes {
 #[derive(Default)]
 pub struct InputAxis {
     pub val: f32,
-    axis_id: Axis,
-    positive_key_codes: HashSet<KeyCode>,
-    negative_key_codes: HashSet<KeyCode>,
+    pub axis_id: Axis,
+    pub positive_key_codes: HashSet<KeyCode>,
+    pub negative_key_codes: HashSet<KeyCode>,
 }
 
 impl InputAxis {

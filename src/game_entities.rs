@@ -90,3 +90,6 @@ pub struct BoundsBundle {
 pub struct MatchScore {
     pub score: HashMap<Team, i32>,
 }
+
+pub struct BallLaunchDelay(pub Timer);
+pub struct BallLaunch;
