@@ -1,9 +1,6 @@
 use super::game_entities::*;
 use bevy::prelude::*;
-use bevy_rapier2d::{
-    plugin::RapierConfiguration,
-    prelude::{ActiveEvents, Ccd, Collider, LockedAxes, RigidBody, Velocity, Dominance, Restitution},
-};
+use bevy_rapier2d::prelude::*;
 use std::collections::HashMap;
 
 pub fn setup_physics(mut physics: ResMut<RapierConfiguration>) {
@@ -22,20 +19,16 @@ pub fn spawn_score(mut commands: Commands) {
 
 pub fn spawn_paddles(mut commands: Commands) {
     spawn_player_paddle(&mut commands);
-    spawn_enemy_paddle(&mut commands);
+    // spawn_enemy_paddle(&mut commands);
 }
 
 pub fn spawn_ball(mut commands: Commands) {
     commands
         .spawn_bundle(BallBundle {
             ball: Ball {
+                initial_speed: 500.0,
                 speed_multiplier: 1.05,
             },
-            speed: Speed {
-                initial: 500.0,
-                current: 500.0,
-            },
-            mov_dir: MovementDirection::from_random_horizontal(),
             sprite: SpriteBundle {
                 sprite: Sprite {
                     color: Color::WHITE,
@@ -107,10 +100,6 @@ fn spawn_enemy_paddle(mut commands: &mut Commands) {
 fn spawn_paddle(commands: &mut Commands, translation: &Vec3) -> Entity {
     commands
         .spawn_bundle(PaddleBundle {
-            speed: Speed {
-                initial: 500.0,
-                current: 500.0,
-            },
             sprite: SpriteBundle {
                 sprite: Sprite {
                     color: Color::WHITE,
@@ -125,8 +114,7 @@ fn spawn_paddle(commands: &mut Commands, translation: &Vec3) -> Entity {
             },
             collider: Collider::cuboid(50.0, 250.0),
             rb: RigidBody::Dynamic,
-            paddle: default(),
-            mov_dir: default(),
+            paddle: Paddle { speed: 500.0 },
             coll_events: ActiveEvents::COLLISION_EVENTS,
             locked_axes: LockedAxes::all(),
         })
