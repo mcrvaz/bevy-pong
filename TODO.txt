@@ -1,5 +1,5 @@
-victory condition
 UI: HUD + menu
+victory condition
 AI paddle controller
 Alt player controller
 multiple balls

@@ -41,6 +41,7 @@ impl Plugin for PongGame {
                     .with_system(score)
                     .with_system(reset_ball)
                     .with_system(paddle_movement)
+                    .with_system(limit_ball_velocity),
             );
     }
 }
@@ -87,7 +88,7 @@ fn paddle_movement(
     let input = axis_inputs.single();
     let vertical_input = input.val.get(&input::Axis::Vertical).unwrap();
     for (mut rb, paddle) in query.iter_mut() {
-        rb.linvel = Vec2::new(0.0, vertical_input.val * paddle.speed);
+        rb.linvel.y = vertical_input.val * paddle.speed;
     }
 }
 
@@ -169,9 +170,14 @@ fn launch_ball(ball: &Ball, mut velocity: &mut Velocity) {
 fn prevent_stuck_ball(mut query: Query<&mut Velocity, With<Ball>>) {
     const MIN_V: f32 = 25.0;
     for mut v in query.iter_mut() {
-        println!("{}", v.linvel.x);
         if utils::approx_eq(v.linvel.x, 0.0, MIN_V) {
             v.linvel.x += MIN_V * v.linvel.x.signum();
         }
+    }
+}
+
+fn limit_ball_velocity(mut query: Query<(&mut Velocity, &Ball)>) {
+    for (mut v, ball) in query.iter_mut() {
+        v.linvel = v.linvel.min(ball.max_speed);
     }
 }

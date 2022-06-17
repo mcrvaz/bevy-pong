@@ -45,6 +45,7 @@ pub struct AIPaddle;
 pub struct Ball {
     pub initial_speed: f32,
     pub speed_multiplier: f32,
+    pub max_speed: Vec2
 }
 
 #[derive(Clone, Component, Default)]

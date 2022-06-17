@@ -28,6 +28,7 @@ pub fn spawn_ball(mut commands: Commands, assets: Res<AssetServer>) {
             ball: Ball {
                 initial_speed: 500.0,
                 speed_multiplier: 1.05,
+                max_speed: Vec2::new(2000.0, 2000.0),
             },
             sprite: SpriteBundle {
                 sprite: Sprite {
