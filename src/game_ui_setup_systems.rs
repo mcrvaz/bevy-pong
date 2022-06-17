@@ -3,90 +3,60 @@ use bevy::prelude::*;
 
 const FONT_ASSET: &str = "fonts/Roboto-Regular.ttf";
 
-pub fn spawn_score_text(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands
-        .spawn_bundle(TextBundle {
-            style: Style {
-                align_self: AlignSelf::Auto,
-                position_type: PositionType::Absolute,
-                position: Rect {
-                    top: Val::Percent(5.0),
-                    left: Val::Percent(30.0),
-                    ..default()
-                },
-                ..default()
+pub fn spawn_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let text_bundle = TextBundle {
+        style: Style {
+            size: Size {
+                width: Val::Auto,
+                height: Val::Percent(10.0),
             },
-            text: Text::with_section(
-                "",
-                TextStyle {
-                    font: asset_server.load(FONT_ASSET),
-                    font_size: 100.0,
-                    color: Color::WHITE,
-                },
-                TextAlignment {
-                    horizontal: HorizontalAlign::Center,
-                    vertical: VerticalAlign::Center,
-                },
-            ),
             ..default()
-        })
-        .insert(ScoreText { team: Team::Player });
+        },
+        text: Text::with_section(
+            "",
+            TextStyle {
+                font: asset_server.load(FONT_ASSET),
+                font_size: 100.0,
+                color: Color::WHITE,
+            },
+            TextAlignment {
+                horizontal: HorizontalAlign::Center,
+                vertical: VerticalAlign::Center,
+            },
+        ),
+        ..default()
+    };
 
     commands
-        .spawn_bundle(TextBundle {
+        .spawn_bundle(NodeBundle {
+            visibility: Visibility { is_visible: false },
             style: Style {
-                align_self: AlignSelf::Auto,
-                position_type: PositionType::Absolute,
-                position: Rect {
-                    top: Val::Percent(5.0),
-                    right: Val::Percent(30.0),
+                size: Size {
+                    width: Val::Percent(100.0),
+                    height: Val::Auto,
+                },
+                flex_direction: FlexDirection::Row,
+                justify_content: JustifyContent::SpaceAround,
+                align_items: AlignItems::FlexEnd,
+                margin: Rect {
+                    top: Val::Percent(2.0),
                     ..default()
                 },
                 ..default()
             },
-            text: Text::with_section(
-                "",
-                TextStyle {
-                    font: asset_server.load(FONT_ASSET),
-                    font_size: 100.0,
-                    color: Color::WHITE,
-                },
-                TextAlignment {
-                    horizontal: HorizontalAlign::Center,
-                    vertical: VerticalAlign::Center,
-                },
-            ),
             ..default()
         })
-        .insert(ScoreText { team: Team::AI });
-}
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(text_bundle.clone())
+                .insert(ScoreText { team: Team::Player });
 
-pub fn spawn_ball_launch_timer_text(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands
-        .spawn_bundle(TextBundle {
-            style: Style {
-                align_self: AlignSelf::Auto,
-                position_type: PositionType::Absolute,
-                position: Rect {
-                    top: Val::Percent(5.0),
-                    left: Val::Percent(50.0),
-                    ..default()
-                },
-                ..default()
-            },
-            text: Text::with_section(
-                "",
-                TextStyle {
-                    font: asset_server.load(FONT_ASSET),
-                    font_size: 100.0,
-                    color: Color::WHITE,
-                },
-                TextAlignment {
-                    horizontal: HorizontalAlign::Center,
-                    vertical: VerticalAlign::Center,
-                },
-            ),
-            ..default()
-        })
-        .insert(BallLaunchTimerText);
+            parent
+                .spawn_bundle(text_bundle.clone())
+                .insert(BallLaunchTimerText);
+
+            parent
+                .spawn_bundle(text_bundle.clone())
+                .insert(ScoreText { team: Team::AI });
+        });
 }

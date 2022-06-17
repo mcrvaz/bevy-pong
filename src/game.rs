@@ -22,8 +22,7 @@ impl Plugin for PongGame {
                     .with_system(spawn_paddles)
                     .with_system(spawn_bounds)
                     .with_system(spawn_score)
-                    .with_system(spawn_score_text)
-                    .with_system(spawn_ball_launch_timer_text),
+                    .with_system(spawn_hud)
             )
             .add_startup_system_set_to_stage(
                 StartupStage::PostStartup,

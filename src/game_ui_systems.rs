@@ -3,13 +3,13 @@ use bevy::prelude::*;
 
 pub fn update_ball_launch_timer(
     timer: Res<BallLaunchDelay>,
-    mut query: Query<(&mut Style, &mut Text), With<BallLaunchTimerText>>,
+    mut query: Query<(&mut Visibility, &mut Text), With<BallLaunchTimerText>>,
 ) {
-    for (mut style, mut text) in query.iter_mut() {
+    for (mut visibility, mut text) in query.iter_mut() {
         if timer.0.finished() {
-            style.display = Display::None;
+            visibility.is_visible = false;
         } else {
-            style.display = Display::Flex;
+            visibility.is_visible = true;
             let remaining = timer.0.duration().as_secs_f32() - timer.0.elapsed_secs();
             text.sections[0].value = format!("{:0.1}", remaining);
         }
