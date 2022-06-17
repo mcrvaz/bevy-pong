@@ -5,13 +5,6 @@ const FONT_ASSET: &str = "fonts/Roboto-Regular.ttf";
 
 pub fn spawn_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
     let text_bundle = TextBundle {
-        style: Style {
-            size: Size {
-                width: Val::Auto,
-                height: Val::Percent(10.0),
-            },
-            ..default()
-        },
         text: Text::with_section(
             "",
             TextStyle {
