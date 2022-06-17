@@ -7,8 +7,9 @@ pub fn setup_physics(mut physics: ResMut<RapierConfiguration>) {
     physics.gravity = Vec2::ZERO;
 }
 
-pub fn setup_camera(mut commands: Commands) {
+pub fn setup_cameras(mut commands: Commands) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn_bundle(UiCameraBundle::default());
 }
 
 pub fn spawn_score(mut commands: Commands) {
@@ -36,7 +37,7 @@ pub fn spawn_ball(mut commands: Commands, assets: Res<AssetServer>) {
                     custom_size: Option::Some(Vec2::new(25.0, 25.0)),
                     ..default()
                 },
-                texture: assets.load("circle.png"),
+                texture: assets.load("sprites/circle.png"),
                 ..default()
             },
             collider: Collider::ball(12.5),

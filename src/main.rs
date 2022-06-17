@@ -2,6 +2,8 @@ use bevy::{prelude::*, window::PresentMode};
 mod game;
 mod game_entities;
 mod game_setup_systems;
+mod game_ui_systems;
+mod game_ui_setup_systems;
 mod input;
 mod utils;
 use bevy_rapier2d::prelude::*;

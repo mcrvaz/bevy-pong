@@ -1,4 +1,7 @@
-use super::{game_entities::*, game_setup_systems::*, input, utils};
+use super::{
+    game_entities::*, game_setup_systems::*, game_ui_setup_systems::*, game_ui_systems::*, input,
+    utils,
+};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
@@ -13,12 +16,18 @@ impl Plugin for PongGame {
             .add_startup_system_set(
                 SystemSet::new()
                     .label(Label::Setup)
-                    .with_system(setup_camera)
+                    .with_system(setup_cameras)
                     .with_system(setup_physics)
                     .with_system(spawn_ball)
                     .with_system(spawn_paddles)
                     .with_system(spawn_bounds)
-                    .with_system(spawn_score),
+                    .with_system(spawn_score)
+                    .with_system(spawn_score_text)
+                    .with_system(spawn_ball_launch_timer_text),
+            )
+            .add_startup_system_set_to_stage(
+                StartupStage::PostStartup,
+                SystemSet::new().with_system(initial_score),
             )
             .add_system_set(
                 SystemSet::new()
@@ -30,7 +39,8 @@ impl Plugin for PongGame {
                 SystemSet::new()
                     .label(Label::BallLaunch)
                     .after(Label::CollisionCheck)
-                    .with_system(ball_launch_timer),
+                    .with_system(ball_launch_timer)
+                    .with_system(update_ball_launch_timer),
             )
             .add_system_set(
                 SystemSet::new()
@@ -42,6 +52,12 @@ impl Plugin for PongGame {
                     .with_system(reset_ball)
                     .with_system(paddle_movement)
                     .with_system(limit_ball_velocity),
+            )
+            .add_system_set(
+                SystemSet::new()
+                    .label(Label::UI)
+                    .after(Label::Default)
+                    .with_system(update_score_runtime),
             );
     }
 }
@@ -52,6 +68,7 @@ pub enum Label {
     CollisionCheck,
     BallLaunch,
     Default,
+    UI,
 }
 
 fn ball_launch_timer(
