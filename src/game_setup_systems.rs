@@ -28,7 +28,7 @@ pub fn spawn_ball(mut commands: Commands, assets: Res<AssetServer>) {
         .spawn_bundle(BallBundle {
             ball: Ball {
                 initial_speed: 500.0,
-                speed_multiplier: 1.05,
+                speed_multiplier: 1.25,
                 max_speed: Vec2::new(2000.0, 2000.0),
             },
             sprite: SpriteBundle {
@@ -46,7 +46,8 @@ pub fn spawn_ball(mut commands: Commands, assets: Res<AssetServer>) {
             coll_events: ActiveEvents::COLLISION_EVENTS,
         })
         .insert(Velocity::zero())
-        .insert(Restitution::coefficient(1.0));
+        .insert(Restitution::coefficient(1.0))
+        .insert(Friction::coefficient(0.0));
 }
 
 pub fn spawn_bounds(window: Res<WindowDescriptor>, mut commands: Commands) {
@@ -92,7 +93,7 @@ fn spawn_player_paddle(mut commands: &mut Commands) {
 
 fn spawn_enemy_paddle(mut commands: &mut Commands) {
     let entity = spawn_paddle(&mut commands, &Vec3::new(500.0, 0.0, 0.0));
-    commands.entity(entity).insert(AIPaddle);
+    commands.entity(entity).insert(AIPaddle::default());
 }
 
 fn spawn_paddle(commands: &mut Commands, translation: &Vec3) -> Entity {
@@ -111,7 +112,7 @@ fn spawn_paddle(commands: &mut Commands, translation: &Vec3) -> Entity {
                 ..default()
             },
             collider: Collider::cuboid(50.0 / 2.0, 250.0 / 2.0),
-            rb: RigidBody::Dynamic,
+            rb: RigidBody::KinematicVelocityBased,
             paddle: Paddle { speed: 500.0 },
             coll_events: ActiveEvents::COLLISION_EVENTS,
             locked_axes: LockedAxes::all(),
@@ -119,6 +120,7 @@ fn spawn_paddle(commands: &mut Commands, translation: &Vec3) -> Entity {
         .insert(Velocity::zero())
         .insert(Dominance::group(10))
         .insert(Restitution::coefficient(1.0))
+        .insert(Friction::coefficient(0.0))
         .id()
 }
 
@@ -148,5 +150,6 @@ fn spawn_bound(
             coll_events: ActiveEvents::COLLISION_EVENTS,
         })
         .insert(Restitution::coefficient(1.0))
+        .insert(Friction::coefficient(0.0))
         .id()
 }

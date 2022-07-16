@@ -1,7 +1,7 @@
-UI: HUD + menu
-victory condition
 AI paddle controller
 Alt player controller
+victory condition
+UI: menu
 multiple balls
 ball spawn animation
 sounds

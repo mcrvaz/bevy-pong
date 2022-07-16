@@ -1,10 +1,12 @@
+use crate::utils::{approx_eq, inverse_lerp, lerp, random_horizontal, rotate_vec2};
+
 use super::{
     game_entities::*, game_setup_systems::*, game_ui_setup_systems::*, game_ui_systems::*, input,
-    utils,
 };
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use iyes_loopless::prelude::*;
+use rand::random;
 
 pub struct PongGame;
 impl Plugin for PongGame {
@@ -22,7 +24,7 @@ impl Plugin for PongGame {
                     .with_system(spawn_paddles)
                     .with_system(spawn_bounds)
                     .with_system(spawn_score)
-                    .with_system(spawn_hud)
+                    .with_system(spawn_hud),
             )
             .add_startup_system_set_to_stage(
                 StartupStage::PostStartup,
@@ -46,10 +48,11 @@ impl Plugin for PongGame {
                     .label(Label::Default)
                     .after(Label::BallLaunch)
                     .with_system(start_ball_movement.run_if(is_ball_launch_ready))
-                    .with_system(prevent_stuck_ball.run_if(is_ball_moving))
+                    .with_system(prevent_stuck_ball.run_if(was_ball_launched))
                     .with_system(score)
                     .with_system(reset_ball)
                     .with_system(paddle_movement)
+                    .with_system(enemy_paddle_movement)
                     .with_system(limit_ball_velocity),
             )
             .add_system_set(
@@ -86,7 +89,7 @@ fn is_ball_launch_ready(timer: Res<BallLaunchDelay>) -> bool {
     timer.0.just_finished()
 }
 
-fn is_ball_moving(timer: Res<BallLaunchDelay>) -> bool {
+fn was_ball_launched(timer: Res<BallLaunchDelay>) -> bool {
     timer.0.finished()
 }
 
@@ -110,32 +113,59 @@ fn paddle_movement(
 
 fn evaluate_ball_collision(
     mut ev_goal: EventWriter<GoalEvent>,
-    mut ball_query: Query<(Entity, &mut Velocity, &Ball)>,
-    paddle_query: Query<Entity, With<Paddle>>,
+    mut ball_query: Query<(Entity, &Transform, &mut Velocity, &Ball)>,
+    paddle_query: Query<(Entity, &Transform, &Collider), With<Paddle>>,
     goal_query: Query<(Entity, &Goal)>,
     rapier_context: Res<RapierContext>,
 ) {
-    for (ball_entity, mut ball_velocity, ball) in ball_query.iter_mut() {
-        for contact_pair in rapier_context.contacts_with(ball_entity) {
-            let other = if ball_entity == contact_pair.collider1() {
+    for (b_entity, b_transform, mut b_velocity, b) in ball_query.iter_mut() {
+        for contact_pair in rapier_context.contacts_with(b_entity) {
+            let other = if b_entity == contact_pair.collider1() {
                 contact_pair.collider2()
             } else {
                 contact_pair.collider1()
             };
 
             let opt_goal = || goal_query.iter().find(|x| x.0 == other);
-            let is_paddle = || paddle_query.contains(other);
-            if is_paddle() {
-                handle_ball_paddle_collision(&mut ball_velocity, ball);
+            let opt_paddle = paddle_query.iter().find(|x| x.0 == other);
+            if let Some((_, p_transform, p_collider)) = opt_paddle {
+                handle_ball_paddle_collision(
+                    p_transform,
+                    p_collider,
+                    b_transform,
+                    &mut b_velocity,
+                    b,
+                );
             } else if let Some((_, goal)) = opt_goal() {
-                handle_ball_goal_collision(&mut ev_goal, goal, ball_entity.id());
+                handle_ball_goal_collision(&mut ev_goal, goal, b_entity.id());
             }
         }
     }
 }
 
-fn handle_ball_paddle_collision(velocity: &mut Velocity, ball: &Ball) {
-    velocity.linvel *= ball.speed_multiplier;
+fn handle_ball_paddle_collision(
+    p_transform: &Transform,
+    p_collider: &Collider,
+    b_transform: &Transform,
+    b_velocity: &mut Velocity,
+    b: &Ball,
+) {
+    let col_extents = p_collider.as_cuboid().unwrap().half_extents();
+
+    let p_min = p_transform.translation.truncate() - col_extents;
+    let p_max = p_transform.translation.truncate() + col_extents;
+    let b_position = b_transform.translation.truncate();
+
+    const MIN_ANGLE: f32 = 45.0_f32;
+    const MAX_ANGLE: f32 = -45.0_f32;
+    let reflection_ratio = inverse_lerp(p_min.y, p_max.y, b_position.y);
+    let mut reflection_radians = lerp(MIN_ANGLE, MAX_ANGLE, reflection_ratio).to_radians();
+    if reflection_radians != 0.0 {
+        // a bit of noise to prevent the ball from always hitting the same spot
+        reflection_radians += random::<f32>().to_radians();
+    }
+
+    b_velocity.linvel = rotate_vec2(b_velocity.linvel * b.speed_multiplier, reflection_radians);
 }
 
 fn handle_ball_goal_collision(ev_goal: &mut EventWriter<GoalEvent>, goal: &Goal, ball_id: u32) {
@@ -180,13 +210,13 @@ fn set_initial_ball_speed(mut velocity: &mut Velocity) {
 }
 
 fn launch_ball(ball: &Ball, mut velocity: &mut Velocity) {
-    velocity.linvel = utils::random_horizontal() * ball.initial_speed;
+    velocity.linvel = random_horizontal() * ball.initial_speed;
 }
 
 fn prevent_stuck_ball(mut query: Query<&mut Velocity, With<Ball>>) {
-    const MIN_V: f32 = 25.0;
+    const MIN_V: f32 = 100.0;
     for mut v in query.iter_mut() {
-        if utils::approx_eq(v.linvel.x, 0.0, MIN_V) {
+        if approx_eq(v.linvel.x, 0.0, MIN_V) {
             v.linvel.x += MIN_V * v.linvel.x.signum();
         }
     }
@@ -194,6 +224,26 @@ fn prevent_stuck_ball(mut query: Query<&mut Velocity, With<Ball>>) {
 
 fn limit_ball_velocity(mut query: Query<(&mut Velocity, &Ball)>) {
     for (mut v, ball) in query.iter_mut() {
-        v.linvel = v.linvel.min(ball.max_speed);
+        v.linvel = Vec2::min(v.linvel, ball.max_speed);
+    }
+}
+
+fn enemy_paddle_movement(
+    ball_query: Query<(Entity, &Transform), With<Ball>>,
+    mut paddle_query: Query<(&Paddle, &AIPaddle, &Transform, &mut Velocity)>,
+) {
+    let (paddle, ai_paddle, paddle_transform, mut paddle_vel) = paddle_query.single_mut();
+    let (_, ball_transform) = ball_query
+        .iter()
+        .find(|x| x.0.id() == ai_paddle.target_ball)
+        .or(ball_query.iter().next())
+        .unwrap();
+
+    let y_diff = ball_transform.translation.y - paddle_transform.translation.y;
+    const MAX_DELTA: f32 = 45.0_f32;
+    if approx_eq(y_diff, 0.0, MAX_DELTA) {
+        paddle_vel.linvel.y = 0.0;
+    } else {
+        paddle_vel.linvel.y = y_diff.signum() * paddle.speed;
     }
 }

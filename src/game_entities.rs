@@ -39,7 +39,10 @@ pub struct Paddle {
 pub struct PlayerPaddle;
 
 #[derive(Clone, Component, Default)]
-pub struct AIPaddle;
+pub struct AIPaddle {
+    pub target_ball: u32,
+    pub last_velocity_change_time: f32
+}
 
 #[derive(Clone, Component)]
 pub struct Ball {
