@@ -1,5 +1,6 @@
 use bevy::{prelude::*, window::PresentMode};
 mod game;
+mod game_systems;
 mod game_entities;
 mod game_setup_systems;
 mod game_ui_systems;
